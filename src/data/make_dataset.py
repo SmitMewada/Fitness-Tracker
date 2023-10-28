@@ -56,3 +56,59 @@ def data_from_files(files):
 acc_df, gyro_df = data_from_files(files=files)
     
     
+# Merging the datasets
+
+'''
+    Here, the gyroscope has higher frequency in caputring the data. As a result, there will be many null values in the merged dataset.
+'''
+data_merged = pd.concat([acc_df.iloc[:, :3], gyro_df], axis=1)
+
+# Renaming the columns
+
+data_merged.columns = [
+    "acc_x",
+    "acc_y",
+    "acc_z",
+    "gyro_x",
+    "gyro_y",
+    "gyro_z",
+    "label",
+    "category",
+    "participant",
+    "set"
+]
+
+# Resampling data (frequency conversion)
+
+'''
+    Accelerometer: 12.500HZ
+    Gyroscope:     25.00HZ
+'''
+
+sampling = {
+    "acc_x": "mean", 
+    "acc_y": "mean",
+    "acc_z": "mean", 
+    "gyro_x": "mean", 
+    "gyro_y": "mean", 
+    "gyro_z": "mean", 
+    "label": "last",
+    "category": "last",
+    "participant": "last",
+    "set": "last"
+}
+
+data_merged[:1000].resample(rule="200ms").apply(sampling)
+
+# Split by day
+days = [g for n, g in data_merged.groupby(pd.Grouper(freq="D"))]
+
+data_resampled = pd.concat([data_merged[:1000].resample(rule="200ms").apply(sampling).dropna() for df in days])
+
+data_resampled["set"] = data_resampled["set"].astype("int")
+
+# Export dataset
+data_resampled.to_pickle("../../data/interim/01_dataprocessed.pkl")
+
+
+
